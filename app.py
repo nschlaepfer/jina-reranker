@@ -4,9 +4,12 @@ import json
 
 class InferlessPythonModel:
     def initialize(self):
-        # Load the model and tokenizer from Hugging Face
+        # Load the model and tokenizer from Hugging Face with ignore_mismatched_sizes
         self.tokenizer = AutoTokenizer.from_pretrained("jinaai/jina-reranker-v1-tiny-en")
-        self.model = AutoModelForSequenceClassification.from_pretrained("jinaai/jina-reranker-v1-tiny-en")
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            "jinaai/jina-reranker-v1-tiny-en",
+            ignore_mismatched_sizes=True
+        )
 
     def infer(self, inputs):
         # Parse input data
@@ -21,12 +24,11 @@ class InferlessPythonModel:
         with torch.no_grad():
             outputs = self.model(**encoded_input)
         
-        # Process the results
+        # Extract scores and sort results
         scores = torch.nn.functional.softmax(outputs.logits, dim=1)[:, 1].tolist()
         results = [{"text": doc, "score": score} for doc, score in zip(documents, scores)]
-
-        # Sort results by score
         results.sort(key=lambda x: x['score'], reverse=True)
+
         return {"output": json.dumps(results)}
 
     def finalize(self):
